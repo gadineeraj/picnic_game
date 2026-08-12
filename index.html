@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Can I bring it?</title>
+<meta name="robots" content="noindex">
+<style>
+  :root{
+    --bg:#f6f1e7; --card:#fffdf8; --ink:#241f1a; --muted:#7a6f61;
+    --line:#e2d8c6; --yes:#1f7a4d; --yes-bg:#e4f3ea; --no:#a8322b; --no-bg:#fbe8e6;
+    --accent:#8a6d3b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#15130f; --card:#1e1b16; --ink:#f1ebdf; --muted:#a2978a;
+      --line:#332d24; --yes:#7ad3a0; --yes-bg:#16301f; --no:#f19189; --no-bg:#331916;
+      --accent:#d9b981;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:16px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:680px;margin:0 auto}
+  header{text-align:center;margin-bottom:22px}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:14px;margin:0}
+  form{display:flex;gap:8px;margin:0 0 16px}
+  input[type=text]{
+    flex:1;min-width:0;padding:14px 16px;font-size:17px;
+    border:1.5px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--ink);
+  }
+  input[type=text]:focus{outline:none;border-color:var(--accent)}
+  button{
+    font:inherit;cursor:pointer;border-radius:12px;border:1.5px solid var(--line);
+    background:var(--card);color:var(--ink);padding:14px 18px;
+  }
+  button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  button:active{transform:translateY(1px)}
+
+  .verdict{
+    border-radius:16px;padding:22px 20px;text-align:center;margin-bottom:22px;
+    border:1.5px solid var(--line);background:var(--card);
+    min-height:104px;display:flex;flex-direction:column;justify-content:center;gap:6px;
+  }
+  .verdict.yes{background:var(--yes-bg);border-color:var(--yes)}
+  .verdict.no{background:var(--no-bg);border-color:var(--no)}
+  .verdict .big{font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .verdict.yes .big{color:var(--yes)}
+  .verdict.no .big{color:var(--no)}
+  .verdict .line{font-size:16px}
+  .verdict .idle{color:var(--muted);font-size:15px}
+  .split{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--muted);letter-spacing:.02em}
+  .split b{color:var(--ink);font-weight:600}
+  .pop{animation:pop .22s ease-out}
+  @keyframes pop{from{transform:scale(.97);opacity:.4}to{transform:scale(1);opacity:1}}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .col{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+  .col h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:0 0 10px;color:var(--muted)}
+  .col.y h2{color:var(--yes)} .col.n h2{color:var(--no)}
+  ul{list-style:none;margin:0;padding:0}
+  li{padding:5px 0;border-bottom:1px dashed var(--line);word-break:break-word}
+  li:last-child{border-bottom:0}
+  li .how{display:block;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted);line-height:1.45}
+  .empty{color:var(--muted);font-size:14px;font-style:italic}
+
+  footer{margin-top:28px;text-align:center}
+  .ghost{background:none;border:none;color:var(--muted);font-size:13px;padding:6px 10px;text-decoration:underline}
+
+  dialog{
+    border:1.5px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);
+    max-width:560px;width:calc(100% - 32px);padding:20px;max-height:86vh;
+  }
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  dialog h3{margin:0 0 4px;font-size:18px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line)}
+  .row:last-of-type{border-bottom:0}
+  .row small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
+  .spoiler{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;font-size:14.5px}
+  .spoiler ol{margin:8px 0 0;padding-left:20px} .spoiler li{border:0;padding:3px 0}
+  .sw{position:relative;width:46px;height:26px;flex:0 0 auto}
+  .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%}
+  .sw span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.15s;pointer-events:none}
+  .sw span::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--card);transition:.15s}
+  .sw input:checked + span{background:var(--yes)}
+  .sw input:checked + span::after{transform:translateX(20px)}
+  .btnrow{display:flex;gap:8px;margin-top:16px}
+  .btnrow button{flex:1;padding:11px}
+
+  .ptable{display:flex;flex-wrap:wrap;gap:5px;max-height:260px;overflow-y:auto;margin-top:10px;
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .el{border:1px solid var(--line);border-radius:7px;padding:4px 6px;min-width:52px;background:var(--card)}
+  .el b{display:block;font-size:14px;line-height:1.15}
+  .el i{display:block;font-style:normal;font-size:9px;color:var(--muted);line-height:1.2}
+  .el .z{font-size:9px;color:var(--muted)}
+  .el.one{border-color:var(--accent)}
+  .lookup{width:100%;margin-top:10px;padding:10px 12px;font-size:15px;border:1.5px solid var(--line);
+    border-radius:10px;background:var(--card);color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Can I bring it?</h1>
+    <p class="sub">Type what you'd like to bring to the picnic. I'll tell you yes or no.</p>
+  </header>
+
+  <form id="f" autocomplete="off">
+    <input id="q" type="text" placeholder="a sandwich&hellip;" autocapitalize="none" spellcheck="false" maxlength="60">
+    <button class="primary" type="submit">Ask</button>
+  </form>
+
+  <div class="verdict" id="verdict"><div class="idle">Nothing asked yet.</div></div>
+
+  <div class="cols">
+    <div class="col y">
+      <h2>You <em>can</em> bring <span id="cy"></span></h2>
+      <ul id="listY"></ul>
+    </div>
+    <div class="col n">
+      <h2>You <em>can't</em> bring <span id="cn"></span></h2>
+      <ul id="listN"></ul>
+    </div>
+  </div>
+
+  <footer><button class="ghost" id="hostBtn" type="button">host</button></footer>
+</div>
+
+<dialog id="hostPanel">
+  <h3>Host panel</h3>
+  <p class="sub" style="margin:0 0 10px">Players: turn back now.</p>
+
+  <div class="row">
+    <div><strong>Show workings</strong><small>Prints every valid breakdown, not just one, plus where a denial got stuck. Host eyes only.</small></div>
+    <label class="sw"><input type="checkbox" id="optShow"><span></span></label>
+  </div>
+  <div class="row">
+    <div><strong>Hard mode</strong><small>Also requires at least one two-letter piece. Kills sun, bus, fun, chip &mdash; words built only from single letters. Bacon, knife, spoon and picnic all survive. Flipping this re-judges the whole board.</small></div>
+    <label class="sw"><input type="checkbox" id="optHard"><span></span></label>
+  </div>
+  <div class="row">
+    <div><strong>Seed the decoy</strong><small>Starts the board with carbon, silicon, iron already allowed.</small></div>
+    <label class="sw"><input type="checkbox" id="optSeed" checked><span></span></label>
+  </div>
+
+  <div class="btnrow">
+    <button type="button" id="revealBtn">Reveal rule &amp; hints</button>
+    <button type="button" id="resetBtn">Clear board</button>
+  </div>
+  <div id="spoiler" class="spoiler" hidden></div>
+  <div class="btnrow"><button type="button" id="closeBtn" class="primary">Close</button></div>
+</dialog>
+
+<script>
+(function(){
+  "use strict";
+  // Nothing to see here. Go play the game.
+  var d = function(s){ return atob(s); };
+
+  // The reference set, in atomic-number order: index + 1 is the number.
+  // No word list anywhere in this file - every answer is derived from this alone.
+  var DATA = d("SDpIeWRyb2dlbixIZTpIZWxpdW0sTGk6TGl0aGl1bSxCZTpCZXJ5bGxpdW0sQjpCb3JvbixDOkNhcmJvbixOOk5pdHJvZ2VuLE86T3h5Z2VuLEY6Rmx1b3JpbmUsTmU6TmVvbixOYTpTb2RpdW0sTWc6TWFnbmVzaXVtLEFsOkFsdW1pbml1bSxTaTpTaWxpY29uLFA6UGhvc3Bob3J1cyxTOlN1bGZ1cixDbDpDaGxvcmluZSxBcjpBcmdvbixLOlBvdGFzc2l1bSxDYTpDYWxjaXVtLFNjOlNjYW5kaXVtLFRpOlRpdGFuaXVtLFY6VmFuYWRpdW0sQ3I6Q2hyb21pdW0sTW46TWFuZ2FuZXNlLEZlOklyb24sQ286Q29iYWx0LE5pOk5pY2tlbCxDdTpDb3BwZXIsWm46WmluYyxHYTpHYWxsaXVtLEdlOkdlcm1hbml1bSxBczpBcnNlbmljLFNlOlNlbGVuaXVtLEJyOkJyb21pbmUsS3I6S3J5cHRvbixSYjpSdWJpZGl1bSxTcjpTdHJvbnRpdW0sWTpZdHRyaXVtLFpyOlppcmNvbml1bSxOYjpOaW9iaXVtLE1vOk1vbHliZGVudW0sVGM6VGVjaG5ldGl1bSxSdTpSdXRoZW5pdW0sUmg6UmhvZGl1bSxQZDpQYWxsYWRpdW0sQWc6U2lsdmVyLENkOkNhZG1pdW0sSW46SW5kaXVtLFNuOlRpbixTYjpBbnRpbW9ueSxUZTpUZWxsdXJpdW0sSTpJb2RpbmUsWGU6WGVub24sQ3M6Q2Flc2l1bSxCYTpCYXJpdW0sTGE6TGFudGhhbnVtLENlOkNlcml1bSxQcjpQcmFzZW9keW1pdW0sTmQ6TmVvZHltaXVtLFBtOlByb21ldGhpdW0sU206U2FtYXJpdW0sRXU6RXVyb3BpdW0sR2Q6R2Fkb2xpbml1bSxUYjpUZXJiaXVtLER5OkR5c3Byb3NpdW0sSG86SG9sbWl1bSxFcjpFcmJpdW0sVG06VGh1bGl1bSxZYjpZdHRlcmJpdW0sTHU6THV0ZXRpdW0sSGY6SGFmbml1bSxUYTpUYW50YWx1bSxXOlR1bmdzdGVuLFJlOlJoZW5pdW0sT3M6T3NtaXVtLElyOklyaWRpdW0sUHQ6UGxhdGludW0sQXU6R29sZCxIZzpNZXJjdXJ5LFRsOlRoYWxsaXVtLFBiOkxlYWQsQmk6QmlzbXV0aCxQbzpQb2xvbml1bSxBdDpBc3RhdGluZSxSbjpSYWRvbixGcjpGcmFuY2l1bSxSYTpSYWRpdW0sQWM6QWN0aW5pdW0sVGg6VGhvcml1bSxQYTpQcm90YWN0aW5pdW0sVTpVcmFuaXVtLE5wOk5lcHR1bml1bSxQdTpQbHV0b25pdW0sQW06QW1lcmljaXVtLENtOkN1cml1bSxCazpCZXJrZWxpdW0sQ2Y6Q2FsaWZvcm5pdW0sRXM6RWluc3RlaW5pdW0sRm06RmVybWl1bSxNZDpNZW5kZWxldml1bSxObzpOb2JlbGl1bSxMcjpMYXdyZW5jaXVtLFJmOlJ1dGhlcmZvcmRpdW0sRGI6RHVibml1bSxTZzpTZWFib3JnaXVtLEJoOkJvaHJpdW0sSHM6SGFzc2l1bSxNdDpNZWl0bmVyaXVtLERzOkRhcm1zdGFkdGl1bSxSZzpSb2VudGdlbml1bSxDbjpDb3Blcm5pY2l1bSxOaDpOaWhvbml1bSxGbDpGbGVyb3ZpdW0sTWM6TW9zY292aXVtLEx2OkxpdmVybW9yaXVtLFRzOlRlbm5lc3NpbmUsT2c6T2dhbmVzc29u");
+
+  var ELS = DATA.split(",").map(function(p, i){
+    var b = p.split(":");
+    return { z: i + 1, sym: b[0], name: b[1] };
+  });
+  var SET = {};                                   // lowercase piece -> canonical symbol
+  ELS.forEach(function(e){ SET[e.sym.toLowerCase()] = e.sym; });
+  var INFO = {};                                  // symbol -> element record
+  ELS.forEach(function(e){ INFO[e.sym] = e; });
+
+  // ---- normalise ---------------------------------------------------
+  // Fold accents first so cafe and cafe agree, then drop everything that
+  // isn't a letter: spaces, hyphens, apostrophes, digits, emoji.
+  function clean(text){
+    var s = text.toLowerCase();
+    if (s.normalize) s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return s.replace(/[^a-z]/g, "");
+  }
+
+  // ---- the adjudicator ---------------------------------------------
+  // Walk the word position by position. At each position try the two-letter
+  // piece and the one-letter piece against the reference set, and recurse.
+  // A dead end backtracks and the other branch is tried, so the search is
+  // complete: if any way through exists, this finds it.
+  //
+  // reach[i] = "from position i, some chain of symbols consumes the rest".
+  // Computed right to left, so it is exact and costs one pass.
+  function analyse(word, hard){
+    var n = word.length;
+    if (!n) return null;
+
+    var reach = new Array(n + 1).fill(false), ways = new Array(n + 1).fill(0);
+    reach[n] = true; ways[n] = 1;
+    for (var i = n - 1; i >= 0; i--){
+      for (var len = 1; len <= 2; len++){
+        if (i + len > n) continue;
+        if (!SET[word.substr(i, len)]) continue;
+        if (reach[i + len]){ reach[i] = true; ways[i] += ways[i + len]; }
+      }
+    }
+
+    // How far in can we get before every branch dies? Left to right this time.
+    var fwd = new Array(n + 1).fill(false); fwd[0] = true;
+    var stuck = 0;
+    for (var j = 0; j <= n; j++){
+      if (!fwd[j]) continue;
+      stuck = Math.max(stuck, j);
+      for (var l = 1; l <= 2; l++)
+        if (j + l <= n && SET[word.substr(j, l)]) fwd[j + l] = true;
+    }
+
+    // Enumerate the ways through. Only descends where reach says the rest
+    // works out, so it never wastes time down a doomed branch.
+    var CAP = 40, splits = [];
+    (function walk(i, acc){
+      if (splits.length >= CAP) return;
+      if (i === n){ splits.push(acc.slice()); return; }
+      for (var len = 1; len <= 2; len++){
+        if (i + len > n) continue;
+        var sym = SET[word.substr(i, len)];
+        if (!sym || !reach[i + len]) continue;
+        acc.push(sym); walk(i + len, acc); acc.pop();
+      }
+    })(0, []);
+
+    var withTwo = splits.filter(function(s){ return s.some(function(x){ return x.length === 2; }); });
+    var ok = hard ? withTwo.length > 0 : reach[0];
+    var show = hard ? withTwo : splits;
+
+    return {
+      ok: ok,
+      splits: show,
+      ways: ways[0],
+      capped: ways[0] > CAP,
+      stuck: word.slice(0, stuck),
+      rest: word.slice(stuck)
+    };
+  }
+
+  // ---- state -------------------------------------------------------
+  var KEY = "cibi.v2";
+  var st = { hard:false, show:false, seed:true, items:[] };
+  try { var raw = localStorage.getItem(KEY); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch(e){}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
+
+  function judge(text){ return analyse(clean(text), st.hard); }
+
+  // ---- rendering ---------------------------------------------------
+  var verdict = document.getElementById("verdict");
+  var listY = document.getElementById("listY"), listN = document.getElementById("listN");
+  var cy = document.getElementById("cy"), cn = document.getElementById("cn");
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  function workings(a, full){
+    if (!a) return "";
+    if (a.ok){
+      var lines = a.splits.slice(0, full ? 6 : 2).map(function(s){ return esc(s.join("·")); });
+      var more = a.ways - a.splits.slice(0, full ? 6 : 2).length;
+      var tail = more > 0 ? " +" + more + " more" : "";
+      if (full && a.splits.length){
+        var names = a.splits[0].map(function(s){
+          return INFO[s].sym + " " + INFO[s].name.toLowerCase() + " " + INFO[s].z; }).join(", ");
+        return "<b>" + lines[0] + "</b>" + (lines.length > 1 ? " / " + lines.slice(1).join(" / ") : "") +
+               tail + "<br>" + esc(names);
+      }
+      return "<b>" + lines[0] + "</b>" + (lines.length > 1 ? " / " + lines.slice(1).join(" / ") : "") + tail;
+    }
+    return a.stuck
+      ? "dead end: " + esc(a.stuck) + " → <b>" + esc(a.rest) + "</b>"
+      : "dead end at the first letter";
+  }
+
+  function draw(){
+    var yes = st.items.filter(function(i){ return i.ok; });
+    var no  = st.items.filter(function(i){ return !i.ok; });
+    cy.textContent = yes.length ? "(" + yes.length + ")" : "";
+    cn.textContent = no.length ? "(" + no.length + ")" : "";
+    [[listY, yes], [listN, no]].forEach(function(p){
+      var el = p[0], arr = p[1];
+      if (!arr.length){ el.innerHTML = '<li class="empty">nothing yet</li>'; return; }
+      el.innerHTML = arr.slice().reverse().map(function(i){
+        var how = st.show ? '<span class="how">' + workings(judge(i.text), false) + "</span>" : "";
+        return "<li>" + esc(i.text) + how + "</li>";
+      }).join("");
+    });
+  }
+
+  function showVerdict(text, a){
+    verdict.className = "verdict pop " + (a.ok ? "yes" : "no");
+    var how = st.show ? '<div class="split">' + workings(a, true) + "</div>" : "";
+    verdict.innerHTML =
+      '<div class="big">' + (a.ok ? "YES" : "NO") + "</div>" +
+      '<div class="line">You ' + (a.ok ? "can" : "can't") + " bring <strong>" + esc(text) + "</strong>.</div>" + how;
+    void verdict.offsetWidth;
+  }
+
+  // ---- input -------------------------------------------------------
+  document.getElementById("f").addEventListener("submit", function(e){
+    e.preventDefault();
+    var q = document.getElementById("q");
+    var text = q.value.trim().replace(/\s+/g, " ");
+    if (!text) return;
+    var a = judge(text);
+    if (!a){
+      verdict.className = "verdict";
+      verdict.innerHTML = '<div class="idle">Try that again with some letters in it.</div>';
+      q.value = ""; return;
+    }
+    showVerdict(text, a);
+    var norm = text.toLowerCase();
+    if (!st.items.some(function(i){ return i.text.toLowerCase() === norm; })){
+      st.items.push({ text: text, ok: a.ok }); save(); draw();
+    }
+    q.value = "";
+    q.blur();
+  });
+
+  // ---- host panel --------------------------------------------------
+  var panel = document.getElementById("hostPanel");
+  var optShow = document.getElementById("optShow"),
+      optHard = document.getElementById("optHard"),
+      optSeed = document.getElementById("optSeed");
+
+  document.getElementById("hostBtn").addEventListener("click", function(){
+    optShow.checked = st.show; optHard.checked = st.hard; optSeed.checked = st.seed;
+    document.getElementById("spoiler").hidden = true;
+    panel.showModal();
+  });
+  document.getElementById("closeBtn").addEventListener("click", function(){ panel.close(); });
+
+  optShow.addEventListener("change", function(){ st.show = optShow.checked; save(); draw(); });
+  optSeed.addEventListener("change", function(){ st.seed = optSeed.checked; save(); });
+  optHard.addEventListener("change", function(){
+    st.hard = optHard.checked;
+    st.items.forEach(function(i){ i.ok = judge(i.text).ok; });   // re-judge the whole board
+    save(); draw();
+  });
+
+  document.getElementById("revealBtn").addEventListener("click", function(){
+    var sp = document.getElementById("spoiler");
+    var rule = d("WW91IGNhbiBicmluZyBpdCBpZiB0aGUgd2hvbGUgd29yZCBjYW4gYmUgc3BlbGxlZCB1c2luZyBvbmx5IGNoZW1pY2FsIGVsZW1lbnQgc3ltYm9scy4gQkFDT04gPSBCYSArIEMgKyBPICsgTi4gS05JRkUgPSBLICsgTmkgKyBGZS4gQW5kIHRoZSByZXZlYWw6IFBJQ05JQyA9IFAgKyBJICsgQyArIE5pICsgQy4=");
+    var hints = d("QWxsb3cgQkFDT04gdW5wcm9tcHRlZCwgcmlnaHQgYWZ0ZXIgZGVueWluZyBPWFlHRU4uIFNheSBub3RoaW5nIGVsc2UufE5vYm9keSBoYXMgYXNrZWQgd2hhdCB0aGUgd29yZHMgYXJlIE1BREUgT0YufEFsbG93IEtOSUZFIGFuZCBXQVRFUiB0byB3aG9ldmVyIGlzIHN0dWNrIC0gYnJlYWtzIHRoZSBmb29kIHRoZW9yeSBhbmQgdGhlIHNwZWxsaW5nIHRoZW9yaWVzIGF0IG9uY2UufEV2ZXJ5dGhpbmcgSSBoYXZlIGFsbG93ZWQsIEkgY291bGQgd3JpdGUgZG93biBpbiBhYm91dCBmb3VyIHBpZWNlcy58RW5kZ2FtZTogSSBhbSBicmluZ2luZyBhIHBpY25pYyB0byB0aGUgcGljbmljLg==").split("|");
+
+    var ones = ELS.filter(function(e){ return e.sym.length === 1; }).length;
+    sp.innerHTML =
+      "<strong>The rule.</strong> " + esc(rule) +
+      "<br><br><strong>Hint ladder</strong> (nothing for the first fifteen minutes)<ol>" +
+      hints.map(function(h){ return "<li>" + esc(h) + "</li>"; }).join("") + "</ol>" +
+      "<br><strong>The reference set</strong> — all " + ELS.length + " elements, " +
+      ones + " single-letter (outlined), " + (ELS.length - ones) + " double. " +
+      "Nothing else is consulted; there is no word list." +
+      '<input class="lookup" id="lookup" placeholder="filter: fe, iron, 26…">' +
+      '<div class="ptable" id="ptable"></div>';
+
+    var box = document.getElementById("ptable"), filt = document.getElementById("lookup");
+    function paint(){
+      var f = filt.value.trim().toLowerCase();
+      box.innerHTML = ELS.filter(function(e){
+        return !f || e.sym.toLowerCase().indexOf(f) === 0 ||
+               e.name.toLowerCase().indexOf(f) > -1 || String(e.z) === f;
+      }).map(function(e){
+        return '<div class="el' + (e.sym.length === 1 ? " one" : "") + '"><span class="z">' + e.z +
+               "</span><b>" + e.sym + "</b><i>" + esc(e.name) + "</i></div>";
+      }).join("") || '<span class="empty">no element matches that</span>';
+    }
+    filt.addEventListener("input", paint);
+    paint();
+    sp.hidden = false;
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    st.items = [];
+    if (st.seed) seed();
+    save(); draw();
+    verdict.className = "verdict";
+    verdict.innerHTML = '<div class="idle">Nothing asked yet.</div>';
+  });
+
+  function seed(){
+    ["carbon","silicon","iron"].forEach(function(t){
+      st.items.push({ text: t, ok: judge(t).ok });
+    });
+  }
+
+  if (!st.items.length && st.seed) { seed(); save(); }
+  draw();
+})();
+</script>
+</body>
+</html>
