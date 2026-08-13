@@ -189,6 +189,11 @@
   <h3>Host panel <span class="sub" id="hpWhich"></span></h3>
   <p class="sub" style="margin:0 0 10px">Players: turn back now.</p>
 
+  <div class="row stack" id="chainRow" hidden>
+    <div><strong>The chain</strong><small id="chainNow"></small></div>
+    <button type="button" id="undoBtn">Step the chain back</button>
+  </div>
+
   <div class="row">
     <div><strong>Show workings</strong><small id="showDesc"></small></div>
     <label class="sw"><input type="checkbox" id="optShow"><span></span></label>
@@ -363,7 +368,34 @@
   }
 
   /* =================================================================
-     THE TWO ROUNDS
+     ROUND THREE
+     ================================================================= */
+  // This rule has memory. Every other round judges a word on its own;
+  // here the answer depends on the last word that got a yes, so the board
+  // has to be replayed in order rather than re-judged word by word.
+  //
+  // link() is the letter a word hands on: second from the end, or third
+  // from the end in hard mode, clamped for words too short to have one.
+  function link(word, hard){
+    var i = word.length - (hard ? 3 : 2);
+    return word[i < 0 ? 0 : i];
+  }
+  function chain(word, hard, need){
+    if (!word) return null;
+    var got = word[0], ok = !need || got === need;
+    return { ok:ok, need:need || null, got:got, next: ok ? link(word, hard) : need };
+  }
+  function chainWorkings(a){
+    var b = function(c){ return "<b>" + esc(c) + "</b>"; };
+    if (!a.need)
+      return "first word, sets the chain &rarr; next needs " + b(a.next);
+    if (a.ok)
+      return "starts " + b(a.got) + " ✓ needed " + b(a.need) + " &rarr; next needs " + b(a.next);
+    return 'starts <span class="bad">' + esc(a.got) + "</span> ✗ needed " + b(a.need);
+  }
+
+  /* =================================================================
+     THE ROUNDS
      ================================================================= */
   var PLAYS = [
     {
@@ -448,6 +480,51 @@
           }).join("") + "</div>";
       },
       wire: function(){}
+    },
+    {
+      id: "p3",
+      tab: "Play 3",
+      name: "Round three",
+      blurb: "One more rule. This one has a memory, which nobody expects.",
+      sub: "Same picnic, another rule. Type what you'd like to bring.",
+      ph: "a sandwich…",
+      stateful: true,   // verdicts depend on order, so the board gets replayed
+      chrono: true,     // and the accepted column reads oldest first
+      hardDesc: "Third-last letter instead of second-last. LAUGH now hands over U, not G. Everyone who just cracked the round starts getting denied on words they have already proved, and the handover letters get rarer, so it bites twice.",
+      showDesc: "Prints the letter each word needed, whether it started with it, and the letter it hands on.",
+      seeds: [
+        { id:"one",   label:"laugh", words:["laugh"] },
+        { id:"three", label:"laugh · ghost · stem", words:["laugh","ghost","stem"] }
+      ],
+      seedDefault: "one",
+      seedDesc: "laugh alone is the cleanest start: it hands over G while ending in H, so last-letter chaining looks right for exactly one guess. The three-word chain adds laugh → ghost, which share “gh” and buy you a second wrong theory for free.",
+      judge: function(w, hard, need){ return chain(w, hard, need); },
+      workings: function(a){ return chainWorkings(a); },
+      rule: "WW91IGNhbiBicmluZyBpdCBpZiB0aGUgd29yZCBzdGFydHMgd2l0aCB0aGUgU0VDT05ELUxBU1QgbGV0dGVyIG9mIHRoZSBsYXN0IHdvcmQgSSBzYWlkIHllcyB0by4gTEFVR0ggaGFuZHMgb3ZlciBHIChsYXVHaCksIHNvIHRoZSBuZXh0IHdvcmQgaGFzIHRvIHN0YXJ0IHdpdGggRyAtIEdBVEUsIHNheSwgd2hpY2ggdGhlbiBoYW5kcyBvdmVyIFQgKGdhVGUpLiBPbmx5IGEgeWVzIG1vdmVzIHRoZSBjaGFpbiBvbjsgYSBkZW5pYWwgY2hhbmdlcyBub3RoaW5nLiBUaGUgdHJhcCBpcyB0aGF0IGV2ZXJ5b25lIHRyaWVzIHRoZSBMQVNUIGxldHRlciBmaXJzdC4=",
+      hints: "RGVueSBmYXN0LCBhbmQgbWFrZSBzdXJlIHlvdXIgZmlyc3QgZGVuaWFscyBhcmUgd29yZHMgc3RhcnRpbmcgd2l0aCB0aGUgTEFTVCBsZXR0ZXIgb2YgdGhlIHdvcmQgeW91IGp1c3QgYWxsb3dlZC4gTGV0IGxhc3QtbGV0dGVyIGNoYWluaW5nIGxvb2sgYWxtb3N0IHJpZ2h0LnxBbGxvdyBvbmUgd29yZCBzdGFydGluZyB3aXRoIHRoZSBzZWNvbmQtbGFzdCBsZXR0ZXIsIHVucHJvbXB0ZWQsIHN0cmFpZ2h0IGFmdGVyIGRlbnlpbmcgdGhlIGxhc3QtbGV0dGVyIG9uZS4gU2F5IG5vdGhpbmcufEl0IGRlcGVuZHMgb24gd2hhdCBJIHNhaWQgeWVzIHRvIGxhc3QuIE5vYm9keSBhc3N1bWVzIHRoZSBydWxlIGhhcyBhIG1lbW9yeSwgYW5kIHRoaXMgaXMgdGhlIHNlbnRlbmNlIHRoYXQgdW5sb2NrcyBpdC58UmVhZCB0aGUgYWNjZXB0ZWQgbGlzdCBvdXQgbG91ZCwgaW4gb3JkZXIufFlvdSBhcmUgZXhhY3RseSBvbmUgbGV0dGVyIG9mZi58RW5kZ2FtZTogd3JpdGUgTEFVR0ggYW5kIEdBVEUgb25lIHVuZGVyIHRoZSBvdGhlciBhbmQgcG9pbnQgYXQgdGhlIEcu",
+      reference: function(){
+        var demo = ["laugh","gate","telephone","note","tent","napkin","ivy"], need = null, rows = [];
+        demo.forEach(function(w){
+          var r = chain(w, false, need);
+          rows.push('<span class="chip ' + (r.ok ? "y" : "n") + '">' + esc(w) +
+            (r.need ? " (needed " + esc(r.need) + ")" : " (free)") + "</span>");
+          if (r.ok) need = r.next;
+        });
+        var traps = ["a gate","the gate","gate"].map(function(p){
+          var r = chain(clean(p), false, "g");
+          return '<span class="chip ' + (r.ok ? "y" : "n") + '">' + esc(p) + " " + (r.ok ? "✓" : "✗") + "</span>";
+        });
+        return "<strong>Ruling live</strong> — hold one letter in your head: the second-last letter of the " +
+          "word you last said yes to. Compare it with the first letter of whatever you are asked next. " +
+          "A denial does not change the letter you are holding." +
+          "<br><br><strong>A worked chain</strong>, starting free" +
+          '<div class="chips">' + rows.join("") + "</div>" +
+          "<strong>The article trap</strong> — with G owed, the article kills it, because the word the room " +
+          "actually said starts with A." +
+          '<div class="chips">' + traps.join("") + "</div>" +
+          '<small class="sub">Dead end? Undo the last word at the top of this panel and the chain steps back.</small>';
+      },
+      wire: function(){}
     }
   ];
   var BY = {}; PLAYS.forEach(function(p){ BY[p.id] = p; });
@@ -458,17 +535,32 @@
   var cur = null;
   function load(p){
     var st = { hard:false, show:false, strict:true, seed:p.seedDefault, touched:false, items:null };
-    try { var raw = localStorage.getItem("cibi." + p.id);
+    try { var raw = localStorage.getItem("cibi2." + p.id);
           if (raw) st = Object.assign(st, JSON.parse(raw)); } catch(e){}
-    if (!st.items){ st.items = seedWords(p, st.seed).slice(); st.touched = false; }
+    if (!st.items){ st.items = seedWords(p, st.seed); st.touched = false; }
     return st;
   }
-  function save(){ try { localStorage.setItem("cibi." + cur.id, JSON.stringify(cur.st)); } catch(e){} }
+  function save(){ try { localStorage.setItem("cibi2." + cur.id, JSON.stringify(cur.st)); } catch(e){} }
   function seedWords(p, id){
     var s = p.seeds.filter(function(x){ return x.id === id; })[0];
-    return s ? s.words : [];
+    return (s ? s.words : []).map(function(w){ return { text:w }; });
   }
-  function judge(text){ return cur.judge(clean(text), cur.st.hard); }
+
+  // Work out every verdict on the board from scratch. For the stateless
+  // rounds that is just a re-judge; for round three the order is the whole
+  // point, so the chain is carried forward as we go.
+  function replay(){
+    var need = null;
+    cur.st.items.forEach(function(it){
+      var a = cur.judge(clean(it.text), cur.st.hard, need);
+      it.a = a;
+      it.ok = !!(a && a.ok);
+      if (cur.stateful && it.ok) need = a.next;
+    });
+    return need;
+  }
+  // What the next accepted word has to start with (round three only).
+  function owed(){ return cur.stateful ? replay() : null; }
 
   var home = document.getElementById("home"), game = document.getElementById("game");
 
@@ -514,18 +606,20 @@
   }
 
   function draw(){
-    var rows = cur.st.items.map(function(t){ return { text:t, a:judge(t) }; });
-    var yes = rows.filter(function(r){ return r.a && r.a.ok; });
-    var no  = rows.filter(function(r){ return r.a && !r.a.ok; });
+    replay();
+    var yes = cur.st.items.filter(function(it){ return it.ok; });
+    var no  = cur.st.items.filter(function(it){ return !it.ok; });
     cy.textContent = yes.length ? "(" + yes.length + ")" : "";
     cn.textContent = no.length ? "(" + no.length + ")" : "";
-    [[listY, yes], [listN, no]].forEach(function(pair){
-      var el = pair[0], arr = pair[1];
+    // A chain only reads properly forwards, so that column stays in order.
+    [[listY, yes, !cur.chrono], [listN, no, true]].forEach(function(pair){
+      var el = pair[0], arr = pair[1].slice();
+      if (pair[2]) arr.reverse();
       if (!arr.length){ el.innerHTML = '<li class="empty">nothing yet</li>'; return; }
-      el.innerHTML = arr.slice().reverse().map(function(r){
-        var how = cur.st.show
-          ? '<span class="how">' + cur.workings(r.a, false, cur.st.hard) + "</span>" : "";
-        return "<li>" + esc(r.text) + how + "</li>";
+      el.innerHTML = arr.map(function(it){
+        var how = cur.st.show && it.a
+          ? '<span class="how">' + cur.workings(it.a, false, cur.st.hard) + "</span>" : "";
+        return "<li>" + esc(it.text) + how + "</li>";
       }).join("");
     });
   }
@@ -551,7 +645,7 @@
       q.value = ""; return;
     }
 
-    var a = judge(text);
+    var a = cur.judge(clean(text), cur.st.hard, owed());
     if (!a){
       verdict.className = "verdict";
       verdict.innerHTML = '<div class="idle">Try that again with some letters in it.</div>';
@@ -564,8 +658,8 @@
       (cur.st.show ? '<div class="split">' + cur.workings(a, true, cur.st.hard) + "</div>" : "");
     void verdict.offsetWidth;
     var norm = text.toLowerCase();
-    if (!cur.st.items.some(function(t){ return t.toLowerCase() === norm; })){
-      cur.st.items.push(text); cur.st.touched = true; save(); draw();
+    if (!cur.st.items.some(function(it){ return it.text.toLowerCase() === norm; })){
+      cur.st.items.push({ text:text }); cur.st.touched = true; save(); draw();
     }
     q.value = ""; q.blur();
   });
@@ -591,30 +685,55 @@
       return '<option value="' + s.id + '"' + (s.id === cur.st.seed ? " selected" : "") + ">" +
              esc(s.label) + "</option>"; }).join("");
     spoiler.hidden = true;
+    chainStatus();
     panel.showModal();
   });
   document.getElementById("closeBtn").addEventListener("click", function(){ panel.close(); });
 
   optShow.addEventListener("change", function(){ cur.st.show = optShow.checked; save(); draw(); });
-  optHard.addEventListener("change", function(){ cur.st.hard = optHard.checked; save(); draw(); });
+  optHard.addEventListener("change", function(){
+    cur.st.hard = optHard.checked; save(); draw(); chainStatus();
+  });
   optStrict.addEventListener("change", function(){
     cur.st.strict = optStrict.checked;
     // Turning it back on sweeps anything the gate would now refuse off the board.
     if (cur.st.strict)
-      cur.st.items = cur.st.items.filter(function(t){ return validate(t).ok; });
-    save(); draw();
+      cur.st.items = cur.st.items.filter(function(it){ return validate(it.text).ok; });
+    save(); draw(); chainStatus();
   });
   optSeed.addEventListener("change", function(){
     cur.st.seed = optSeed.value;
     // Swap the opening board straight away if nobody has played yet;
     // otherwise it takes effect on the next Clear board.
-    if (!cur.st.touched){ cur.st.items = seedWords(cur, cur.st.seed).slice(); draw(); }
+    if (!cur.st.touched){ cur.st.items = seedWords(cur, cur.st.seed); draw(); chainStatus(); }
     save();
   });
   document.getElementById("resetBtn").addEventListener("click", function(){
-    cur.st.items = seedWords(cur, cur.st.seed).slice();
-    cur.st.touched = false; save(); draw(); idle();
+    cur.st.items = seedWords(cur, cur.st.seed);
+    cur.st.touched = false; save(); draw(); idle(); chainStatus();
   });
+  // Drops the last word that got a yes, which is the only thing that moves the
+  // chain. Anything asked after it stays and is simply re-judged against the
+  // letter that is now owed.
+  document.getElementById("undoBtn").addEventListener("click", function(){
+    for (var i = cur.st.items.length - 1; i >= 0; i--)
+      if (cur.st.items[i].ok){ cur.st.items.splice(i, 1); break; }
+    save(); draw(); idle(); chainStatus();
+  });
+
+  // Round three's host needs to see the letter it is holding, and needs a way
+  // back out if the chain hands over something unusable.
+  function chainStatus(){
+    var row = document.getElementById("chainRow");
+    row.hidden = !cur.stateful;
+    if (!cur.stateful) return;
+    var need = owed();
+    var last = cur.st.items.filter(function(it){ return it.ok; }).pop();
+    document.getElementById("chainNow").innerHTML = need
+      ? "Next yes must start with <strong>" + esc(need.toUpperCase()) + "</strong>, from " +
+        esc(last ? last.text : "") + "."
+      : "Chain is open — the next word you allow sets it.";
+  }
 
   document.getElementById("revealBtn").addEventListener("click", function(){
     spoiler.innerHTML =
